@@ -1,6 +1,6 @@
-Word2Vec in Torch 
-Yoon Kim
-yhk255@nyu.edu
+Word2Vec in Torch, based on Yoon Kim's code: https://github.com/yoonkim/word2vec_torch
+Junwei Pan
+pandevirus@gmail.com
 
 Only has the skip-gram architecture with negative sampling. See https://code.google.com/p/word2vec/ for more details.
 
