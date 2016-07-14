@@ -54,4 +54,12 @@ for k = 1, config.epochs do
     m.lr = config.lr -- reset learning rate at each epoch
     m:train_model(config.corpus)
 end
-m:print_sim_words({"the","he","can"},5)
+-- m:print_sim_words({"the","he","can"},5)
+path_model = 'model/model'
+path_vector = 'model/vector'
+m:save_model(path_model)
+m:save_vector(path_vector)
+
+m2 = torch.load(path_model)
+--m2:print_sim_words({"the","he","can"},5)
+--m2:print_sim_words_interactive(5)

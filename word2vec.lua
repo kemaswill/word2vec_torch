@@ -210,6 +210,23 @@ function Word2Vec:print_sim_words(words, k)
     end
 end
 
+-- print similar words in an interactive way
+function Word2Vec:print_sim_words_interactive(k)
+    print("Please input the words")
+    while true do
+        local line = io.read()
+        if line == nil then break end
+        if self.word2index[line] == nil then 
+            print(string.format("%s is not in the vocabulary", line))
+        else
+            r = self:get_sim_words(line, k)
+            for j = 1, k do
+                print(string.format("%s, %.4f", r[j][1], r[j][2]))
+            end
+        end
+    end
+end
+
 -- split on separator
 function Word2Vec:split(input, sep)
     if sep == nil then
@@ -283,4 +300,23 @@ function Word2Vec:train_model(corpus)
         self:preload_data(corpus)
 	self:train_mem()
     end
+end
+
+-- save model to disc
+function Word2Vec:save_model(path)
+    torch.save(path, self)
+end
+
+-- save vectors for each word
+function Word2Vec:save_vector(path)
+    if self.word_vecs_norm == nil then
+        self.word_vecs_norm = self:normalize(self.word_vecs.weight:double())
+    end
+    t = {}
+    for i = 1, self.vocab_size do
+        word = self.index2word[i]
+        v = self.word_vecs_norm[i]
+        t[word] = v
+    end
+    torch.save(path, t, "ascii")
 end
