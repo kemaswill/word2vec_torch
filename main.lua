@@ -10,7 +10,7 @@ dofile("word2vec.lua")
 
 -- Default configuration
 config = {}
-config.corpus = "corpus.txt" -- input data
+config.corpus = "text8" -- input data
 config.window = 5 -- (maximum) window size
 config.dim = 100 -- dimensionality of word embeddings
 config.alpha = 0.75 -- smooth out unigram frequencies
@@ -23,6 +23,7 @@ config.epochs = 3 -- number of epochs to train
 config.gpu = 0 -- 1 = use gpu, 0 = use cpu
 config.stream = 1 -- 1 = stream from hard drive 0 = copy to memory first
 config.mode = "sg" -- sg for SkipGram, cw for Continuous Bag-of-Words
+config.suffix = "" -- suffix for model id
 
 -- Parse input arguments
 cmd = torch.CmdLine()
@@ -38,6 +39,7 @@ cmd:option("-epochs", config.epochs)
 cmd:option("-gpu", config.gpu)
 cmd:option("-stream", config.stream)
 cmd:option("-mode", config.mode)
+cmd:option("-suffix", config.suffix)
 params = cmd:parse(arg)
 
 for param, value in pairs(params) do
@@ -57,8 +59,8 @@ for k = 1, config.epochs do
     m:train_model(config.corpus)
 end
 -- m:print_sim_words({"the","he","can"},5)
-path_model = 'model/model_' .. config.mode .. '_' .. config.corpus
-path_vector = 'model/vector_' .. config.mode .. '_' .. config.corpus
+path_model = 'model/model_' .. config.mode .. '_' .. config.corpus .. '_' .. config.suffix
+path_vector = 'model/vector_' .. config.mode .. '_' .. config.corpus .. '_' .. config.suffix
 m:save_model(path_model)
 m:save_vector(path_vector)
 

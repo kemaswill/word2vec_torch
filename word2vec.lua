@@ -146,12 +146,12 @@ end
 -- Sample negative contexts
 function Word2Vec:sample_negatives(word)
     self.negatives[1] = word
-    local i = 0
+    local i = 2
     while i < self.neg_samples do
         neg_context = self.table[torch.random(self.table_size)]
         -- neg_context = torch.random(#self.index2word)
 	if word ~= neg_context then
-	    self.negatives[i+2] = neg_context
+	    self.negatives[i] = neg_context
 	    i = i + 1
 	end
     end
@@ -188,6 +188,51 @@ function Word2Vec:train_stream(corpus)
                 end		
 	    end
 	end
+    end
+end
+
+function Word2Vec:train_stream_cw(corpus)
+    print("Training...")
+    local start = sys.clock()
+    local c = 0
+    f = io.open(corpus, "r")
+    for line in f:lines() do
+	sentence = self:split(line)
+	cnt_word = 0
+	for ii = 1, #sentence do
+	    if self.word2index[sentence[ii]] ~= nil then cnt_word = cnt_word + 1 end
+	end
+	if cnt_word > 2 * self.window + 1 then 
+	    for i, word in ipairs(sentence) do
+	        word_idx = self.word2index[word]
+	        if word_idx ~= nil then
+		    self.word[1] = word_idx
+		    self.v_contexts:fill(0)
+		    window_acc = 1
+		    v_context_idx = 1
+		    while self.v_contexts[#self.v_contexts] == 0 do
+			window_size_cur = math.floor((window_acc - 1) / 2)
+			if window_acc % 2 == 1 then window_idx = i - window_size_cur else window_idx = i + window_size_cur end
+			window_acc = window_acc + 1
+			local context = sentence[window_idx]
+		        if context ~= nil then
+		            context_idx = self.word2index[context]
+		            if context_idx ~= nil then
+			        self.v_contexts[v_context_idx] = context_idx
+				v_context_idx = v_context_idx + 1
+			    end
+			end
+		    end
+                    self:sample_negatives(word_idx)
+		    self:train_pair(self.v_contexts, self.negatives)
+		    c = c + 1
+		    self.lr = math.max(self.min_lr, self.lr + self.decay) 
+		    if c % 100000 ==0 then
+			print(string.format("%d words trained in %.2f seconds. Learning rate: %.4f", c, sys.clock() - start, self.lr))
+		    end
+                end
+            end
+        end
     end
 end
 
@@ -373,8 +418,12 @@ function Word2Vec:train_model(corpus)
         self:cuda()
     end
     if self.stream == 1 then
-        self:train_stream(corpus)
-    else
+	if self.mode == 'sg' then
+            self:train_stream(corpus)
+        elseif self.mode == 'cw' then
+            self:train_stream_cw(corpus)
+	end
+    else 
         self:preload_data(corpus)
 	self:train_mem()
     end
