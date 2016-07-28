@@ -22,6 +22,7 @@ config.min_lr = 0.001 -- min learning rate
 config.epochs = 3 -- number of epochs to train
 config.gpu = 0 -- 1 = use gpu, 0 = use cpu
 config.stream = 1 -- 1 = stream from hard drive 0 = copy to memory first
+config.mode = "sg" -- sg for SkipGram, cw for Continuous Bag-of-Words
 
 -- Parse input arguments
 cmd = torch.CmdLine()
@@ -36,6 +37,7 @@ cmd:option("-table_size", config.table_size)
 cmd:option("-epochs", config.epochs)
 cmd:option("-gpu", config.gpu)
 cmd:option("-stream", config.stream)
+cmd:option("-mode", config.mode)
 params = cmd:parse(arg)
 
 for param, value in pairs(params) do
@@ -55,11 +57,11 @@ for k = 1, config.epochs do
     m:train_model(config.corpus)
 end
 -- m:print_sim_words({"the","he","can"},5)
-path_model = 'model/model'
-path_vector = 'model/vector'
+path_model = 'model/model_' .. config.mode .. '_' .. config.corpus
+path_vector = 'model/vector_' .. config.mode .. '_' .. config.corpus
 m:save_model(path_model)
 m:save_vector(path_vector)
 
 m2 = torch.load(path_model)
---m2:print_sim_words({"the","he","can"},5)
+m2:print_sim_words({"the","he","can"},5)
 --m2:print_sim_words_interactive(5)
