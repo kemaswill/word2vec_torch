@@ -65,5 +65,5 @@ m:save_model(path_model)
 m:save_vector(path_vector)
 
 m2 = torch.load(path_model)
-m2:print_sim_words({"the","he","can"},5)
+m2:print_sim_words({"one", "second", "city", "man", "china"},10)
 --m2:print_sim_words_interactive(5)

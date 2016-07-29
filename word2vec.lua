@@ -90,7 +90,7 @@ function Word2Vec:build_model()
         self.w2v.modules[1]:add(self.word_vecs)
         self.w2v:add(nn.MM(false, true)) -- dot prod and sigmoid to get probabilities
         self.w2v:add(nn.Sigmoid())
-        self.decay = (self.min_lr-self.lr)/(self.total_count*self.window)
+        self.decay = (self.min_lr - self.lr) / (self.total_count * self.window)
     else
         self.context_vecs = nn.LookupTable(self.vocab_size, self.dim) -- word embeddings
         self.word_vecs = nn.LookupTable(self.vocab_size, self.dim) -- word embeddings
@@ -105,7 +105,7 @@ function Word2Vec:build_model()
         self.w2v.modules[1]:add(self.sum_word)
         self.w2v:add(nn.MM(false, true)) -- dot prod and sigmoid to get probabilities
         self.w2v:add(nn.Sigmoid())
-        self.decay = (self.min_lr-self.lr)/(self.total_count*self.window)
+        self.decay = (self.min_lr - self.lr) / (self.total_count * self.window)
     end
 end
 
@@ -147,10 +147,30 @@ end
 function Word2Vec:sample_negatives(word)
     self.negatives[1] = word
     local i = 2
-    while i < self.neg_samples do
+    while i <= self.neg_samples + 1 do
         neg_context = self.table[torch.random(self.table_size)]
         -- neg_context = torch.random(#self.index2word)
 	if word ~= neg_context then
+	    self.negatives[i] = neg_context
+	    i = i + 1
+	end
+    end
+end
+
+-- Sample negative contexts
+function Word2Vec:sample_negatives_cw(word, lst_context)
+    self.negatives[1] = word
+    local i = 2
+    while i <= self.neg_samples + 1 do
+        neg_context = self.table[torch.random(self.table_size)]
+        -- neg_context = torch.random(#self.index2word)
+	flag = true
+	if word == neg_context then flag = false end
+	for j = 1, lst_context:size(1) do
+	    idx = lst_context[j]
+	    if idx == neg_context then flag = false end
+	end
+	if flag then
 	    self.negatives[i] = neg_context
 	    i = i + 1
 	end
@@ -208,22 +228,34 @@ function Word2Vec:train_stream_cw(corpus)
 	        if word_idx ~= nil then
 		    self.word[1] = word_idx
 		    self.v_contexts:fill(0)
-		    window_acc = 1
+		    self.v_contexts_word_debug = {}
+		    window_acc = 2
 		    v_context_idx = 1
 		    while self.v_contexts[#self.v_contexts] == 0 do
-			window_size_cur = math.floor((window_acc - 1) / 2)
-			if window_acc % 2 == 1 then window_idx = i - window_size_cur else window_idx = i + window_size_cur end
+			window_size_cur = math.floor(window_acc / 2)
+			if window_acc % 2 == 0 then window_idx = i - window_size_cur else window_idx = i + window_size_cur end
 			window_acc = window_acc + 1
 			local context = sentence[window_idx]
 		        if context ~= nil then
 		            context_idx = self.word2index[context]
 		            if context_idx ~= nil then
 			        self.v_contexts[v_context_idx] = context_idx
+				self.v_contexts_word_debug[v_context_idx] = context
 				v_context_idx = v_context_idx + 1
 			    end
 			end
 		    end
-                    self:sample_negatives(word_idx)
+		    --[[
+		    print("word:")
+		    print(word)
+	    	    print("self.v_contexts:")
+		    print(self.v_contexts)
+		    print("self.v_contexts_word_debug")
+		    print(self.v_contexts_word_debug)
+		    print("self.negatives")
+		    print(self.negatives)
+		    --]]
+		    self:sample_negatives_cw(word_idx, self.v_contexts)
 		    self:train_pair(self.v_contexts, self.negatives)
 		    c = c + 1
 		    self.lr = math.max(self.min_lr, self.lr + self.decay) 
@@ -249,7 +281,11 @@ end
 -- w can be a string such as "king" or a vector for ("king" - "queen" + "man")
 function Word2Vec:get_sim_words(w, k)
     if self.word_vecs_norm == nil then
-        self.word_vecs_norm = self:normalize(self.word_vecs.weight:double())
+	if self.mode == 'cw' then
+	    self.word_vecs_norm = self:normalize(self.context_vecs.weight:double())
+        else
+	    self.word_vecs_norm = self:normalize(self.word_vecs.weight:double())
+	end
     end
     if type(w) == "string" then
         if self.word2index[w] == nil then
