@@ -2,7 +2,7 @@ Word2Vec in Torch, based on Yoon Kim's code: https://github.com/yoonkim/word2vec
 Junwei Pan
 pandevirus@gmail.com
 
-Only has the skip-gram architecture with negative sampling. See https://code.google.com/p/word2vec/ for more details.
+Including both skip-gram and continuous bag-of-words architecture, see https://code.google.com/p/word2vec/ for more details.
 
 Note: This is considerably slower than the word2vec toolkit and gensim implementations.
 
@@ -22,13 +22,15 @@ Arguments are mostly self-explanatory (see main.lua for default arguments)
 -epochs : number of epochs to run
 -stream : whether to stream text data from HD or store in memory (1 = stream, 0 = not)
 -gpu : whether to use gpu (1 = use gpu, 0 = not)
+-mode: which architecture to use(sg = SkipGram, cw = continuous bag-of-words)
+-suffix: the suffix of the stored model file
 
 For example:
 
 CPU:
-th main.lua -corpus corpus.txt -window 3 -dim 100 -minfreq 10 -stream 1 -gpu 0 
+th main.lua -corpus corpus.txt -window 3 -dim 100 -minfreq 10 -stream 1 -gpu 0 -mode sg
 
 GPU:
-th main.lua -corpus corpus.txt -window 3 -dim 100 -minfreq 10 -stream 0 -gpu 1
+th main.lua -corpus corpus.txt -window 3 -dim 100 -minfreq 10 -stream 0 -gpu 1 -mode cw
 
 
