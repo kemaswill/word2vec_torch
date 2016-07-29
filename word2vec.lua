@@ -157,7 +157,10 @@ function Word2Vec:sample_negatives(word)
     end
 end
 
--- Sample negative contexts
+-- Sample negative contexts for the CBOW architecture, this is
+-- diffrent from the  Word2Vec:sample_negatives(word) function
+-- since the negative samples should not be the same as the center
+-- word as well as the context word.
 function Word2Vec:sample_negatives_cw(word, lst_context)
     self.negatives[1] = word
     local i = 2
@@ -211,6 +214,8 @@ function Word2Vec:train_stream(corpus)
     end
 end
 
+-- Train on sentences that are streamed from the hard drive
+-- Check train_mem function to train from memory (after pre-loading data into tensor)
 function Word2Vec:train_stream_cw(corpus)
     print("Training...")
     local start = sys.clock()
@@ -245,16 +250,6 @@ function Word2Vec:train_stream_cw(corpus)
 			    end
 			end
 		    end
-		    --[[
-		    print("word:")
-		    print(word)
-	    	    print("self.v_contexts:")
-		    print(self.v_contexts)
-		    print("self.v_contexts_word_debug")
-		    print(self.v_contexts_word_debug)
-		    print("self.negatives")
-		    print(self.negatives)
-		    --]]
 		    self:sample_negatives_cw(word_idx, self.v_contexts)
 		    self:train_pair(self.v_contexts, self.negatives)
 		    c = c + 1
@@ -388,38 +383,22 @@ function Word2Vec:preload_data(corpus)
                 elseif self.mode == "cw" and cnt_word > 2 * self.window + 1 then
 		    c = c + 1
 		    self.v_contexts:fill(0)
-		    window_acc = 1
+		    window_acc = 2
 		    v_context_idx = 1
-		    while self.v_contexts[#self.v_contexts] == 0 do
-		        window_size_cur = math.floor((window_acc - 1) / 2)
-			if window_acc % 2 == 1 then window_idx = i - window_size_cur else window_idx = i + window_size_cur end
+		    while self.v_contexts[#self.v_contexts] == 0 do -- this while is used to collect 2 * window context words around the center word
+		        window_size_cur = math.floor(window_acc / 2)
+			if window_acc % 2 == 0 then window_idx = i - window_size_cur else window_idx = i + window_size_cur end
 			window_acc = window_acc + 1
 			local context = sentence[window_idx]
-			if context ~= nil then
+			if context ~= nil then --possible context
 		            context_idx = self.word2index[context]
-		            if context_idx ~= nil then
+		            if context_idx ~= nil then -- valid context
 			        self.v_contexts[v_context_idx] = context_idx
 				v_context_idx = v_context_idx + 1
 			    end
 			end
 		    end
-		    --[[
-		    local jj = 1
-    	            local reduced_window = torch.random(self.window) -- pick random window size
-		    for j = i - reduced_window, i + reduced_window do
-		        if j ~= i then
-			    print("if j ~= i, j: %d", j)
-			    local context = sentence[j]
-			    context_idx = self.word2index[context]
-			    print("context_idx: %d", context_idx)
-			    if context_idx ~= nil then
-				self.v_contexts[jj] = context_idx
-				jj = jj + 1
-			    end
-			end
-		    end
-		    ]]--
-		    self:sample_negatives(word_idx)
+		    self:sample_negatives_cw(word_idx, self.v_contexts) -- update pos.neg contexts
 		    if self.gpu == 1 then
 		        self.train_words[c] = self.v_contexts:clone():cuda()
 			self.train_contexts[c] = self.negatives:clone():cuda()
@@ -470,7 +449,7 @@ function Word2Vec:save_model(path)
     torch.save(path, self)
 end
 
--- save vectors for each word
+-- save vectors for each word to disc
 function Word2Vec:save_vector(path)
     if self.word_vecs_norm == nil then
         self.word_vecs_norm = self:normalize(self.word_vecs.weight:double())

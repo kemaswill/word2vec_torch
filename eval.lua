@@ -7,7 +7,18 @@ require("cutorch")
 require("cunn")
 dofile("word2vec.lua")
 
-path_model = "model/model_sg_corpus.txt_fix_ns_bug"
-m2 = torch.load(path_model)
---m2:print_sim_words({"the","he","can"},5)
-m2:print_sim_words_interactive(10)
+-- Default configuration
+config = {}
+config.model = "model/model" -- model path
+
+cmd = torch.CmdLine()
+cmd:option("-model", config.model)
+params = cmd:parse(arg)
+
+for param, value in pairs(params) do
+    config[param] = value
+end
+
+-- Load the word2vec model and evaluate
+m = torch.load(config.model)
+m:print_sim_words_interactive(10)
